@@ -483,7 +483,9 @@ def _friendly_error_message(error: Exception) -> str | None:
             "To fix this, set the API key for your model provider:\n"
             "  • Anthropic:   export ANTHROPIC_API_KEY=sk-...\n"
             "  • OpenAI:      export OPENAI_API_KEY=sk-...\n"
-            "  • HF Router:   export HF_TOKEN=hf_...\n\n"
+            "  • DeepSeek:    export DEEPSEEK_API_KEY=sk-...\n"
+            "  • HF Router:   export HF_TOKEN=hf_...\n"
+            "  • Custom GW:   export LITELLM_API_BASE=... LITELLM_API_KEY=sk-...\n\n"
             "You can also add it to a .env file in the project root.\n"
             "To switch models, use the /model command."
         )

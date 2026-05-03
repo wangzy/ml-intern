@@ -3,7 +3,14 @@
 Kept separate from ``agent_loop`` so tools (research, context compaction, etc.)
 can import it without pulling in the whole agent loop / tool router and
 creating circular imports.
+
+Custom LiteLLM gateway: when ``LITELLM_API_BASE`` is set, ALL model calls
+are routed through that endpoint with ``LITELLM_API_KEY`` as the auth token.
+This overrides the built-in HF Router endpoint for HF models and replaces
+the default provider endpoints for direct provider models.
 """
+
+import os
 
 from agent.core.hf_tokens import get_hf_bill_to, resolve_hf_router_token
 
@@ -72,12 +79,14 @@ _patch_litellm_effort_validation()
 # Effort levels accepted on the wire.
 #   Anthropic (4.6+):  low | medium | high | xhigh | max   (output_config.effort)
 #   OpenAI direct:     minimal | low | medium | high | xhigh (reasoning_effort top-level)
+#   DeepSeek direct:   minimal | low | medium | high | xhigh (reasoning_effort top-level; OpenAI-compatible API)
 #   HF router:         low | medium | high                 (extra_body.reasoning_effort)
 #
 # We validate *shape* here and let the probe cascade walk down on rejection;
 # we deliberately do NOT maintain a per-model capability table.
 _ANTHROPIC_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 _OPENAI_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
+_DEEPSEEK_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
 _HF_EFFORTS = {"low", "medium", "high"}
 
 
@@ -113,6 +122,10 @@ def _resolve_llm_params(
 
     • ``openai/<model>`` — ``reasoning_effort`` forwarded as a top-level
       kwarg (GPT-5 / o-series). LiteLLM uses the user's ``OPENAI_API_KEY``.
+
+    • ``deepseek/<model>`` — ``reasoning_effort`` forwarded as a top-level
+      kwarg. LiteLLM uses the user's ``DEEPSEEK_API_KEY`` env var to route
+      directly to DeepSeek's OpenAI-compatible API.
 
     • Anything else is treated as a HuggingFace router id. We hit the
       auto-routing OpenAI-compatible endpoint at
@@ -158,17 +171,16 @@ def _resolve_llm_params(
                 # permitted".
                 params["thinking"] = {"type": "adaptive"}
                 params["output_config"] = {"effort": level}
-        return params
 
-    if model_name.startswith("bedrock/"):
+    elif model_name.startswith("bedrock/"):
         # LiteLLM routes ``bedrock/...`` through the Converse adapter, which
         # picks up AWS credentials from the standard env vars
         # (``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY`` / ``AWS_REGION``).
         # The Anthropic thinking/effort shape is not forwarded through Converse
         # the same way, so we leave it off for now.
-        return {"model": model_name}
+        params = {"model": model_name}
 
-    if model_name.startswith("openai/"):
+    elif model_name.startswith("openai/"):
         params = {"model": model_name}
         if reasoning_effort:
             if reasoning_effort not in _OPENAI_EFFORTS:
@@ -178,24 +190,49 @@ def _resolve_llm_params(
                     )
             else:
                 params["reasoning_effort"] = reasoning_effort
-        return params
 
-    hf_model = model_name.removeprefix("huggingface/")
-    api_key = _resolve_hf_router_token(session_hf_token)
-    params = {
-        "model": f"openai/{hf_model}",
-        "api_base": "https://router.huggingface.co/v1",
-        "api_key": api_key,
-    }
-    if bill_to := get_hf_bill_to():
-        params["extra_headers"] = {"X-HF-Bill-To": bill_to}
-    if reasoning_effort:
-        hf_level = "low" if reasoning_effort == "minimal" else reasoning_effort
-        if hf_level not in _HF_EFFORTS:
-            if strict:
-                raise UnsupportedEffortError(
-                    f"HF router doesn't accept effort={hf_level!r}"
-                )
-        else:
-            params["extra_body"] = {"reasoning_effort": hf_level}
+    elif model_name.startswith("deepseek/"):
+        # DeepSeek uses an OpenAI-compatible API. LiteLLM natively routes
+        # ``deepseek/...`` prefix and picks up ``DEEPSEEK_API_KEY``.
+        params = {"model": model_name}
+        if reasoning_effort:
+            if reasoning_effort not in _DEEPSEEK_EFFORTS:
+                if strict:
+                    raise UnsupportedEffortError(
+                        f"DeepSeek doesn't accept effort={reasoning_effort!r}"
+                    )
+            else:
+                params["reasoning_effort"] = reasoning_effort
+
+    else:
+        hf_model = model_name.removeprefix("huggingface/")
+        api_key = _resolve_hf_router_token(session_hf_token)
+        params = {
+            "model": f"openai/{hf_model}",
+            "api_base": "https://router.huggingface.co/v1",
+            "api_key": api_key,
+        }
+        if bill_to := get_hf_bill_to():
+            params["extra_headers"] = {"X-HF-Bill-To": bill_to}
+        if reasoning_effort:
+            hf_level = "low" if reasoning_effort == "minimal" else reasoning_effort
+            if hf_level not in _HF_EFFORTS:
+                if strict:
+                    raise UnsupportedEffortError(
+                        f"HF router doesn't accept effort={hf_level!r}"
+                    )
+            else:
+                params["extra_body"] = {"reasoning_effort": hf_level}
+
+    # When LITELLM_API_BASE is set, route ALL calls through a custom
+    # LiteLLM proxy/gateway instead of the default provider endpoints.
+    # LITELLM_API_KEY provides the gateway auth token. This overrides
+    # ``api_base`` and ``api_key`` set above (including the HF Router).
+    custom_base = os.environ.get("LITELLM_API_BASE")
+    if custom_base:
+        params["api_base"] = custom_base
+        custom_key = os.environ.get("LITELLM_API_KEY")
+        if custom_key:
+            params["api_key"] = custom_key
+
     return params

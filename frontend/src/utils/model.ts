@@ -8,6 +8,7 @@
 
 export const CLAUDE_MODEL_PATH = 'bedrock/us.anthropic.claude-opus-4-6-v1';
 export const GPT_55_MODEL_PATH = 'openai/gpt-5.5';
+export const DEEPSEEK_MODEL_PATH = 'deepseek/deepseek-v4-pro';
 export const FIRST_FREE_MODEL_PATH = 'moonshotai/Kimi-K2.6';
 
 export function isClaudePath(modelPath: string | undefined): boolean {
@@ -15,5 +16,5 @@ export function isClaudePath(modelPath: string | undefined): boolean {
 }
 
 export function isPremiumPath(modelPath: string | undefined): boolean {
-  return modelPath === CLAUDE_MODEL_PATH || modelPath === GPT_55_MODEL_PATH;
+  return modelPath === CLAUDE_MODEL_PATH || modelPath === GPT_55_MODEL_PATH || modelPath === DEEPSEEK_MODEL_PATH;
 }

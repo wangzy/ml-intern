@@ -77,6 +77,14 @@ const DEFAULT_MODEL_OPTIONS: ModelOption[] = [
     modelPath: 'deepseek-ai/DeepSeek-V4-Pro:deepinfra',
     avatarUrl: getHfAvatarUrl('deepseek-ai/DeepSeek-V4-Pro'),
   },
+  {
+    id: 'deepseek-v4-pro-direct',
+    name: 'DeepSeek V4 Pro',
+    description: 'DeepSeek',
+    modelPath: 'deepseek/deepseek-v4-pro',
+    avatarUrl: 'https://huggingface.co/api/avatars/deepseek-ai',
+    recommended: true,
+  },
 ];
 
 const findModelByPath = (path: string, options: ModelOption[]): ModelOption | undefined => {

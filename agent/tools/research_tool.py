@@ -225,6 +225,8 @@ def _get_research_model(main_model: str) -> str:
         return "anthropic/claude-sonnet-4-6"
     if main_model.startswith("bedrock/") and "anthropic" in main_model:
         return "bedrock/us.anthropic.claude-sonnet-4-6"
+    if main_model.startswith("deepseek/"):
+        return "deepseek/deepseek-v4-pro"
     # For non-Anthropic models (HF router etc.), use the same model
     return main_model
 
