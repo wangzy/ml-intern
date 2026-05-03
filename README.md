@@ -27,7 +27,8 @@ Create a `.env` file in the project root (or export these in your shell):
 
 ```bash
 ANTHROPIC_API_KEY=<your-anthropic-api-key> # if using anthropic models
-OPENAI_API_KEY=<your-openai-api-key> # if using openai models
+OPENAI_API_KEY=<your-openai-api-key>     # if using openai models
+DEEPSEEK_API_KEY=<your-deepseek-api-key> # if using deepseek models
 HF_TOKEN=<your-hugging-face-token>
 GITHUB_TOKEN=<github-personal-access-token> 
 ```
@@ -52,6 +53,7 @@ ml-intern "fine-tune llama on my dataset"
 ```bash
 ml-intern --model anthropic/claude-opus-4-6 "your prompt"
 ml-intern --model openai/gpt-5.5 "your prompt"
+ml-intern --model deepseek/deepseek-v4-pro "your prompt"
 ml-intern --max-iterations 100 "your prompt"
 ml-intern --no-stream "your prompt"
 ```
@@ -140,6 +142,22 @@ JSON file:
   }
 }
 ```
+
+### Custom LiteLLM Gateway
+
+Route all LLM calls through your own LiteLLM proxy or gateway by setting:
+
+```bash
+export LITELLM_API_BASE="http://localhost:4000"
+export LITELLM_API_KEY="sk-your-gateway-key"
+```
+
+When `LITELLM_API_BASE` is set, every model — including `anthropic/`, `openai/`,
+`deepseek/`, `bedrock/`, and HF Router IDs — is routed through that endpoint
+with `LITELLM_API_KEY` as the auth token. The gateway receives the model name
+with its provider prefix (e.g. `openai/gpt-5.5`) and handles upstream routing.
+Provider-specific parameters like reasoning effort and thinking config are
+forwarded as-is.
 
 ## Architecture
 
