@@ -267,6 +267,109 @@ User Message
      ╚═══════════════════════════════════════════╝
 ```
 
+## Source Tree
+
+```
+├── agent/                          # Core agent logic (Python package)
+│   ├── main.py                     # CLI entry point
+│   ├── config.py                   # Config loading, env var substitution
+│   ├── core/                       # Agent engine
+│   │   ├── agent_loop.py           # Main agent loop (submission, LLM, tools)
+│   │   ├── session.py              # Session, Event, ContextManager classes
+│   │   ├── tools.py                # ToolRouter, ToolSpec, built-in tool registry
+│   │   ├── llm_params.py           # LiteLLM kwargs resolution per provider
+│   │   ├── model_switcher.py       # CLI /model command + probe orchestration
+│   │   ├── effort_probe.py         # Reasoning effort probe cascade
+│   │   ├── doom_loop.py            # Doom loop detection
+│   │   ├── approval_policy.py      # Approval rules for sensitive operations
+│   │   ├── cost_estimation.py      # Cost estimation for tool operations
+│   │   ├── prompt_caching.py       # Anthropic prompt caching breakpoints
+│   │   ├── hf_access.py            # HF API access helpers
+│   │   ├── hf_router_catalog.py    # HF Router model catalog pre-warming
+│   │   ├── hf_tokens.py            # Token resolution (env, HF CLI, etc.)
+│   │   ├── redact.py               # Sensitive data redaction
+│   │   ├── session_persistence.py  # Session save/load to MongoDB/file
+│   │   ├── session_uploader.py     # Upload to HF datasets
+│   │   └── telemetry.py            # Heartbeat saving, telemetry
+│   ├── tools/                      # Tool implementations
+│   │   ├── docs_tools.py           # HF documentation search/fetch
+│   │   ├── papers_tool.py          # Academic paper search
+│   │   ├── jobs_tool.py            # HF Jobs compute
+│   │   ├── sandbox_tool.py         # Sandbox environment management
+│   │   ├── sandbox_client.py       # Remote sandbox client
+│   │   ├── dataset_tools.py        # Dataset inspection
+│   │   ├── research_tool.py        # Sub-agent research
+│   │   ├── plan_tool.py            # Task planning
+│   │   ├── github_find_examples.py # GitHub code search
+│   │   ├── github_list_repos.py    # GitHub repo listing
+│   │   ├── github_read_file.py     # GitHub file reading
+│   │   ├── hf_repo_files_tool.py   # HF repo file operations
+│   │   ├── hf_repo_git_tool.py     # HF repo git operations
+│   │   ├── notify_tool.py          # Slack notifications
+│   │   ├── web_search_tool.py      # Web search
+│   │   └── local_tools.py          # Local shell/file operations
+│   ├── context_manager/            # Context window compaction
+│   │   └── manager.py
+│   ├── messaging/                  # Notification gateway (Slack)
+│   │   ├── gateway.py
+│   │   ├── slack.py
+│   │   └── models.py
+│   ├── prompts/                    # System prompts (YAML)
+│   └── sft/                        # SFT dataset building
+│       └── tagger.py
+├── backend/                        # FastAPI web backend
+│   ├── main.py                     # App setup, CORS, static files
+│   ├── session_manager.py          # Multi-session management, SSE broadcasting
+│   ├── dependencies.py             # Auth dependency injection
+│   ├── user_quotas.py              # Per-user rate limiting
+│   ├── kpis_scheduler.py           # In-process KPI rollup scheduler
+│   ├── models.py                   # Pydantic API models
+│   ├── start.sh                    # Production start script
+│   └── routes/
+│       ├── agent.py                # Agent SSE/WS/REST endpoints
+│       └── auth.py                 # HF OAuth login/callback
+├── frontend/                       # React SPA
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Chat/               # Chat message components
+│   │   │   ├── CodePanel/          # Code editing panel
+│   │   │   ├── Layout/             # App shell layout
+│   │   │   ├── SessionSidebar/     # Session list sidebar
+│   │   │   ├── WelcomeScreen/      # Landing/welcome screen
+│   │   │   ├── SessionChat.tsx      # Main chat session view
+│   │   │   ├── ClaudeCapDialog.tsx  # Claude capability dialog
+│   │   │   ├── JobsUpgradeDialog.tsx # Jobs hardware upgrade dialog
+│   │   │   └── YoloControl.tsx      # YOLO mode toggle
+│   │   ├── hooks/                   # React hooks
+│   │   │   ├── useAgentChat.ts      # AI SDK chat hook (SSE transport)
+│   │   │   ├── useAuth.ts           # Auth state hook
+│   │   │   └── useUserQuota.ts      # Quota tracking hook
+│   │   ├── store/                   # Zustand stores
+│   │   │   ├── agentStore.ts        # Agent state
+│   │   │   ├── sessionStore.ts      # Session management
+│   │   │   └── layoutStore.ts       # UI layout state
+│   │   ├── lib/                     # Client libraries
+│   │   │   ├── sse-chat-transport.ts # SSE transport for AI SDK
+│   │   │   └── chat-message-store.ts # Client-side message store
+│   │   ├── types/                   # TypeScript type definitions
+│   │   └── utils/                   # Shared utilities
+│   ├── vite.config.ts               # Vite config with API proxy
+│   └── package.json
+├── configs/                         # JSON config files
+│   ├── cli_agent_config.json        # CLI defaults
+│   └── frontend_agent_config.json   # Web UI defaults
+├── scripts/                         # Utility scripts
+│   ├── build_kpis.py
+│   ├── build_sft.py
+│   └── sweep_orphan_sandboxes.py
+├── tests/
+│   ├── unit/                        # 30 unit test files
+│   └── integration/                 # 2 integration test files
+├── Dockerfile                       # Multi-stage Docker build
+├── pyproject.toml                   # Python project metadata and dependencies
+└── README.md
+```
+
 ## Events
 
 The agent emits the following events via `event_queue`:
